@@ -36,7 +36,7 @@ typedef struct Context_Extra {
 //
 
 // This is a minimal starting point for new projects. Copy & rename to get started
-#include "oogabooga/examples/minimal_game_loop.c"
+#include "beyondthecrystalsphere.c"
 
 // #include "oogabooga/examples/text_rendering.c"
 // #include "oogabooga/examples/custom_logger.c"

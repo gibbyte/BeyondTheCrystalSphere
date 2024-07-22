@@ -8,8 +8,14 @@ int entry(int argc, char **argv) {
 	window.y = 90;
 	window.clear_color = hex_to_rgba(0X081629FF);
 
-	Gfx_Image* player = load_image_from_disk(fixed_string("player.png"), get_heap_allocator());
-	assert(player, "I broke the game");
+	Gfx_Image* player = load_image_from_disk(fixed_string("asset/player.png"), get_heap_allocator());
+	assert(player, "Player broke game");
+	Gfx_Image* tree000 = load_image_from_disk(fixed_string("asset/tree000.png"), get_heap_allocator());
+	assert(tree000, "tree000 broke game");
+	Gfx_Image* tree001 = load_image_from_disk(fixed_string("asset/tree001.png"), get_heap_allocator());
+	assert(tree001, "tree001 broke game");
+	Gfx_Image* rock000 = load_image_from_disk(fixed_string("asset/rockore000.png"), get_heap_allocator());
+	assert(rock000, "rock000 broke game");
 
 	Vector2 player_pos = v2(0,0);
 	float64 seconds_counter = 0.0;
@@ -24,6 +30,16 @@ int entry(int argc, char **argv) {
 		last_time = now;
 		
 		reset_temporary_storage();
+
+		draw_frame.projection = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
+
+		float zoom = 5.3;
+
+		draw_frame.view = m4_make_scale(v3(1.0/5.3,1.0/5.3,1.0));
+
+//		float64 now = os_get_current_time_in_seconds
+//		float64 delta_t = now - last_time;
+//		last_time
 
 		os_update();
 
@@ -47,12 +63,39 @@ int entry(int argc, char **argv) {
 		}
 		input_axis = v2_normalize(input_axis);
 
-		player_pos = v2_add(player_pos, v2_mulf(input_axis, 1.0 * delta_t));
+		player_pos = v2_add(player_pos, v2_mulf(input_axis, 100.0 * delta_t));
 
-		Matrix4 xform = m4_scalar(1.0);
-		xform         = m4_translate(xform, v3(-player_pos.x, -player_pos.y, 0));
-		draw_image_xform(player, xform, v2(.5f, .5f), COLOR_WHITE);
-		
+		{
+			Vector2 size = v2(6.0, 10.0);
+			Matrix4 xform = m4_scalar(1.0);
+			xform         = m4_translate(xform, v3(-player_pos.x, -player_pos.y, 0));
+			xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
+			draw_image_xform(player, xform, size, COLOR_WHITE);
+		}
+
+		{
+			Vector2 size = v2(12.0, 21.0);
+			Matrix4 xform = m4_scalar(1.0);
+			xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
+			draw_image_xform(tree000, xform, size, COLOR_WHITE);
+		}
+
+		{
+			Vector2 size = v2(6.0, 10.0);
+			Matrix4 xform = m4_scalar(1.0);
+			xform         = m4_translate(xform, v3(-player_pos.x, -player_pos.y, 0));
+			xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
+			draw_image_xform(player, xform, size, COLOR_WHITE);
+		}
+
+		{
+			Vector2 size = v2(6.0, 10.0);
+			Matrix4 xform = m4_scalar(1.0);
+			xform         = m4_translate(xform, v3(-player_pos.x, -player_pos.y, 0));
+			xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
+			draw_image_xform(player, xform, size, COLOR_WHITE);
+		}
+
 	//	draw_rect(v2(sin(now), -.8), v2(.5, .25), COLOR_RED);
 		
 //		float aspect = (f32)window.width/(f32)window.height;

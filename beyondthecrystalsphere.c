@@ -5,10 +5,32 @@ typedef enum EntityArchetype {
 	arch_player = 3,
 } EntityArchetype;
 
+typedef struct DrawFrame {
+	Gfx_Image* image;
+	Vector2 size;
+} Sprite;
+typedef enum SpriteID {
+	SPRITE_nil,
+	SPRITE_player,
+	SPRITE_tree000,
+	SPRITE_tree001,
+	SPRITE_rock000,
+	SPRITE_MAX,
+} SpriteID;
+Sprite sprites[SPRITE_MAX]; 
+Sprite* get_sprite(SpriteID id) {
+	if (id >= 0 && id < SPRITE_MAX) {
+		return &sprites[id];
+	}
+	return &sprites[0];
+}
+
 typedef struct Entity {
 	bool is_valid;
 	EntityArchetype arch;
 	Vector2 pos;
+	bool render_sprite;
+	SpriteID sprite_id;
 } Entity;
 
 #define MAX_ENTITY_COUNT 1024
@@ -19,7 +41,7 @@ typedef struct  World {
 World* world = 0;
 
 Entity* entity_create() {
-	Entity* entity_found = 0;
+	Entity* entity_found = 0; //SCALE_400_PERCENT;
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++) {
 		Entity* existing_entity = &world->entities[i];
 		if (!existing_entity->is_valid) {
@@ -38,18 +60,22 @@ void entity_destroy(Entity* entity) {
 
 void setup_rock(Entity* en) {
 	en->arch = arch_rock;
-//	en->sprite_id = SPRITE_rock000;
+	en->sprite_id = SPRITE_rock000;
+
 }
 
 void setup_tree(Entity* en) {
 	en->arch = arch_tree;
-//	en->sprite_id = SPRITE_rock000;
+	en->sprite_id = SPRITE_tree000;
+//	en->sprite_id = SPRITE_tree001;
 }
 
 void setup_player(Entity* en) {
 	en->arch = arch_player;
-//	en->sprite_id = SPRITE_rock000;
+	en->sprite_id = SPRITE_player;
 }
+
+
 
 
 
@@ -63,6 +89,13 @@ int entry(int argc, char **argv) {
 
 	world = alloc(get_heap_allocator(), sizeof(World));
 	memset(world, 0, sizeof(World));
+
+	//sprites[SPRITE_player] = (Sprite){.image = NULL, .size = {0, 0}};
+
+	sprites[SPRITE_player] = (Sprite){ .image = load_image_from_disk(STR("asset/player.png"), get_heap_allocator()), .size = v2(6.0, 10.0) };
+	sprites[SPRITE_tree000] = (Sprite){ .image = load_image_from_disk(STR("asset/tree000.png"), get_heap_allocator()), .size = v2(12.0, 21.0) };
+	sprites[SPRITE_tree001] = (Sprite){ .image = load_image_from_disk(STR("asset/tree001.png"), get_heap_allocator()), .size = v2(12.0, 21.0) };
+	sprites[SPRITE_rock000] = (Sprite){ .image = load_image_from_disk(STR("asset/rockore000.png"), get_heap_allocator()), .size = v2(6.0, 4.0) };
 
 	Gfx_Image* player = load_image_from_disk(fixed_string("asset/player.png"), get_heap_allocator());
 	assert(player, "Player broke game");
@@ -116,36 +149,16 @@ int entry(int argc, char **argv) {
 			if (en->is_valid) { 
 		
 				switch (en->arch) {
-					case arch_rock: {
-						Vector2 size = v2(6.0, 4.0);
+
+					default: {
+						Sprite* sprite = get_sprite(en->sprite_id);
+		
 						Matrix4 xform = m4_scalar(1.0);
 						xform         = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
-						xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
-						draw_image_xform(rock000, xform, size, COLOR_WHITE);
+						xform         = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
+						draw_image_xform(sprite->image, xform, sprite->size, COLOR_WHITE);
 						break;
-					} 
-					case arch_player: {
-						Vector2 size = v2(6.0, 10.0);
-						Matrix4 xform = m4_scalar(1.0);
-						xform         = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
-						xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
-						draw_image_xform(player, xform, size, COLOR_WHITE);
-						break;
-					} 
-					case arch_tree: {
-				        Vector2 size = v2(12.0, 21.0); // Assuming tree size for demonstration
-				        Matrix4 xform = m4_scalar(1.0);
-				        xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
-				        xform = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
-				        draw_image_xform(tree000, xform, size, COLOR_WHITE); // Assuming treeTexture is defined
-						break;
-				    } 
-					
-					case arch_nil: {
-						break;
-					} 
-
-
+					}	
 				}			
 			}
 		}
@@ -171,34 +184,6 @@ int entry(int argc, char **argv) {
 
 		player_en->pos = v2_add(player_en->pos, v2_mulf(input_axis, 100.0 * delta_t));
 
-//		{
-//			Vector2 size = v2(6.0, 10.0);
-//			Matrix4 xform = m4_scalar(1.0);
-//			xform         = m4_translate(xform, v3(player_en->pos.x, player_en->pos.y, 0));
-//			xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
-//			draw_image_xform(player, xform, size, COLOR_WHITE);
-//		}
-//
-//		{
-//			Vector2 size = v2(12.0, 21.0);
-//			Matrix4 xform = m4_scalar(1.0);
-//			xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
-//			draw_image_xform(tree000, xform, size, COLOR_WHITE);
-//		}
-//
-//		{
-//			Vector2 size = v2(6.0, 10.0);
-//			Matrix4 xform = m4_scalar(1.0);
-//			xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
-//			draw_image_xform(player, xform, size, COLOR_WHITE);
-//		}
-//
-//		{
-//			Vector2 size = v2(6.0, 10.0);
-//			Matrix4 xform = m4_scalar(1.0);
-//			xform         = m4_translate(xform, v3(size.x * -0.5, 0.0, 0));
-//			draw_image_xform(player, xform, size, COLOR_WHITE);
-//		}
 		gfx_update();
 		seconds_counter += delta_t;
 		if (seconds_counter > 1.0) {

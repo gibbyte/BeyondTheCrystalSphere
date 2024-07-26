@@ -96,7 +96,25 @@ void setup_player(Entity* en) {
 	en->sprite_id = SPRITE_player;
 }
 
+Vector2 screen_to_world(float mouseX, float mouseY, Matrix4 projection, Matrix4 view, float windowwidth, float windowheight) {
+	// Normalize the mouse coordinates
+	float ndcX = (mouseX / (windowwidth* 0.5f)) - 1.0f;
+	float ndcY = 1.0f - (mouseY / (windowheight * 0.5f));
 
+	//convert to homogeneous coordinates
+	Vector4 ndcPos = { ndcX, ndcY, 0, 1 };	
+
+	//Compute the inverse matrices
+	Matrix4 invProJ = m4_inverse(projection);
+	Matrix4 invView = m4_inverse(view);
+
+	//Transform to world coordinates
+	Vector4 clipPos = m4_transform(invProJ, ndcPos);
+	Vector4 worldPos = m4_transform(invView, clipPos);
+
+	// Return as 2d vector
+	return (Vector2){ worldPos.x, worldPos.y };
+}
 
 
 
@@ -117,6 +135,11 @@ int entry(int argc, char **argv) {
 	sprites[SPRITE_tree000] = (Sprite){ .image = load_image_from_disk(STR("asset/tree000.png"), get_heap_allocator()), .size = v2(12.0, 21.0) };
 	sprites[SPRITE_tree001] = (Sprite){ .image = load_image_from_disk(STR("asset/tree001.png"), get_heap_allocator()), .size = v2(12.0, 21.0) };
 	sprites[SPRITE_rock000] = (Sprite){ .image = load_image_from_disk(STR("asset/rockore000.png"), get_heap_allocator()), .size = v2(6.0, 4.0) };
+
+	Gfx_Font *font = load_font_from_disk(STR("asset/Roboto-Regular.ttf"), get_heap_allocator());
+	assert(font, "Failed loading Roboto-Regular.ttf, %d", GetLastError());
+
+	const u32 font_height = 48;
 
 	Gfx_Image* player = load_image_from_disk(fixed_string("asset/player.png"), get_heap_allocator());
 	assert(player, "Player broke game");
@@ -158,6 +181,7 @@ int entry(int argc, char **argv) {
 
 		//if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
 		last_time = now;
+		os_update();
 		
 		
 
@@ -173,8 +197,18 @@ int entry(int argc, char **argv) {
 		draw_frame.view = m4_mul(draw_frame.view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0)));
 		draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0/5.3,1.0/5.3,1.0)));
 		}
+		{
+			Vector2 pos = screen_to_world(input_frame.mouse_x, input_frame.mouse_y, draw_frame.projection, draw_frame.view, window.width, window.height);
+			log("%f, %f", input_frame.mouse_x, input_frame.mouse_y);
+			//Sprite* sprite = get_sprite(SPRITE_tree000);
+			//Matrix4 xform = m4_scalar(1.0);
+			//xform         = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
+			//xform         = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
+			//draw_image_xform(sprite->image, xform, sprite->size, COLOR_WHITE);
+			//break;
+		}	
 
-		os_update();
+		// Draw entities		
 
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) {
 			Entity* en = &world->entities[i];
@@ -189,6 +223,8 @@ int entry(int argc, char **argv) {
 						xform         = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
 						xform         = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
 						draw_image_xform(sprite->image, xform, sprite->size, COLOR_WHITE);
+
+						draw_text(font, STR("Beer"), font_height, en->pos, v2(0.1, 0.1), COLOR_WHITE);
 						break;
 					}	
 				}			

@@ -224,7 +224,7 @@ int entry(int argc, char **argv) {
 						xform         = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
 						draw_image_xform(sprite->image, xform, sprite->size, COLOR_WHITE);
 
-						draw_text(font, STR("Beer"), font_height, en->pos, v2(0.1, 0.1), COLOR_WHITE);
+						draw_text(font, sprint(temp, STR("%f %f"), en->pos.x, en->pos.y), font_height, en->pos, v2(0.1, 0.1), COLOR_WHITE);
 						break;
 					}	
 				}			

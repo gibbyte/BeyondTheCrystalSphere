@@ -97,23 +97,27 @@ void setup_player(Entity* en) {
 }
 
 Vector2 screen_to_world(float mouseX, float mouseY, Matrix4 projection, Matrix4 view, float windowwidth, float windowheight) {
-	// Normalize the mouse coordinates
-	float ndcX = (mouseX / (windowwidth* 0.5f)) - 1.0f;
-	float ndcY = 1.0f - (mouseY / (windowheight * 0.5f));
-
-	//convert to homogeneous coordinates
-	Vector4 ndcPos = { ndcX, ndcY, 0, 1 };	
-
+	
+	float mouse_x = input_frame.mouse_x;
+	float mouse_y = input_frame.mouse_y;
 	//Compute the inverse matrices
-	Matrix4 invProJ = m4_inverse(projection);
-	Matrix4 invView = m4_inverse(view);
+	Matrix4 proj = draw_frame.projection;
+	Matrix4 View = draw_frame.view;
+	float window_w = windowwidth;
+	float window_h = windowheight;
+	
+	// Normalize the mouse coordinates
+	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
 
 	//Transform to world coordinates
-	Vector4 clipPos = m4_transform(invProJ, ndcPos);
-	Vector4 worldPos = m4_transform(invView, clipPos);
+	Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);	
+	world_pos = m4_transform(m4_inverse(proj), world_pos);
+	world_pos = m4_transform(view, world_pos);
+	//log("$f, %f", world_pos.x, world_pos.y);
 
 	// Return as 2d vector
-	return (Vector2){ worldPos.x, worldPos.y };
+	return (Vector2){ world_pos.x, world_pos.y };
 }
 
 
@@ -197,18 +201,33 @@ int entry(int argc, char **argv) {
 		draw_frame.view = m4_mul(draw_frame.view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0)));
 		draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0/5.3,1.0/5.3,1.0)));
 		}
-		{
-			Vector2 pos = screen_to_world(input_frame.mouse_x, input_frame.mouse_y, draw_frame.projection, draw_frame.view, window.width, window.height);
-			log("%f, %f", input_frame.mouse_x, input_frame.mouse_y);
-			//Sprite* sprite = get_sprite(SPRITE_tree000);
-			//Matrix4 xform = m4_scalar(1.0);
-			//xform         = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
-			//xform         = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
-			//draw_image_xform(sprite->image, xform, sprite->size, COLOR_WHITE);
-			//break;
-		}	
 
-		// Draw entities		
+	// mouse pos in world space test
+  {
+	 Vector2 mouse_pos = screen_to_world(input_frame.mouse_x, input_frame.mouse_y, draw_frame.projection, draw_frame.view, window.width, window.height);
+	 // log("%f, %f", input_frame.mouse_x, input_frame.mouse_y);
+	 // draw_text(font, sprint(temp, STR("%f %f"), pos.x, pos.y), font_height, pos, v2(0.1, 0.1), COLOR_RED);
+	
+	
+	for (int i = 0; i < MAX_ENTITY_COUNT; i++) {
+			Entity* en = &world->entities[i];
+			if (en->is_valid) {
+				Sprite* sprite = get_sprite(en->sprite_id);
+				Range2f bounds = range2f_make_bottom_center(sprite->size);
+				bounds = range2f_shift(bounds, en->pos);
+	
+				Vector4 col = COLOR_WHITE;
+				col.a = 0.4;
+				if (range2f_contains(bounds, mouse_pos)) {
+					col.a = 1.0;
+				}
+	
+				draw_rect(bounds.min, range2f_size(bounds), col);
+			}
+		}
+	}
+
+		// render		
 
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++) {
 			Entity* en = &world->entities[i];
@@ -216,7 +235,8 @@ int entry(int argc, char **argv) {
 		
 				switch (en->arch) {
 
-					default: {
+					default: 
+					{
 						Sprite* sprite = get_sprite(en->sprite_id);
 		
 						Matrix4 xform = m4_scalar(1.0);
@@ -224,7 +244,7 @@ int entry(int argc, char **argv) {
 						xform         = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
 						draw_image_xform(sprite->image, xform, sprite->size, COLOR_WHITE);
 
-						draw_text(font, sprint(temp, STR("%f %f"), en->pos.x, en->pos.y), font_height, en->pos, v2(0.1, 0.1), COLOR_WHITE);
+						//draw_text(font, sprint(temp, STR("%f %f"), en->pos.x, en->pos.y), font_height, en->pos, v2(0.1, 0.1), COLOR_WHITE);
 						break;
 					}	
 				}			

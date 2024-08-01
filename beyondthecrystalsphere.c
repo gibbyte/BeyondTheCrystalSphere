@@ -5,7 +5,7 @@ int world_pos_to_tile_pos(float world_pos)
 	return (world_pos / (float)tile_width);
 }
 
-float tile_pos_to_world_pos(float tile_pos)
+float tile_pos_to_world_pos(int tile_pos)
 {
 	return ((float)tile_pos * (float)tile_width);
 }
@@ -238,50 +238,57 @@ int entry(int argc, char **argv)
 		}
 
 		// mouse pos in world space test
+
+		Vector2 mouse_pos = screen_to_world();
+		// log("%f, %f", input_frame.mouse_x, input_frame.mouse_y);
+		// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos.x, mouse_pos.y), font_height, mouse_pos, v2(0.1, 0.1), COLOR_RED);
+		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos.x);
+		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos.y);
+
+		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
-			Vector2 mouse_pos = screen_to_world();
-			// log("%f, %f", input_frame.mouse_x, input_frame.mouse_y);
-			// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos.x, mouse_pos.y), font_height, mouse_pos, v2(0.1, 0.1), COLOR_RED);
-
-			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
+			Entity *en = &world->entities[i];
+			if (en->is_valid)
 			{
-				Entity *en = &world->entities[i];
-				if (en->is_valid)
+				Sprite *sprite = get_sprite(en->sprite_id);
+				Range2f bounds = range2f_make_bottom_center(sprite->size);
+				bounds = range2f_shift(bounds, en->pos);
+
+				Vector4 col = COLOR_WHITE;
+				col.a = 0.4;
+				if (range2f_contains(bounds, mouse_pos))
 				{
-					Sprite *sprite = get_sprite(en->sprite_id);
-					Range2f bounds = range2f_make_bottom_center(sprite->size);
-					bounds = range2f_shift(bounds, en->pos);
-
-					Vector4 col = COLOR_WHITE;
-					col.a = 0.4;
-					if (range2f_contains(bounds, mouse_pos))
-					{
-						col.a = 1.0;
-					}
-
-					draw_rect(bounds.min, range2f_size(bounds), col);
+					col.a = 1.0;
 				}
+
+				draw_rect(bounds.min, range2f_size(bounds), col);
 			}
 		}
+
 		// draw a bunch of Squares
-
-		int player_tile_x = world_pos_to_tile_pos(player_en->pos.x);
-		int player_tile_y = world_pos_to_tile_pos(player_en->pos.y);
-		int tile_radius_x = 40;
-		int tile_radius_y = 30;
-
-		for (int x = player_tile_x - tile_radius_x; x < player_tile_x + tile_radius_x; x++)
 		{
-			for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++)
+			int player_tile_x = world_pos_to_tile_pos(player_en->pos.x);
+			int player_tile_y = world_pos_to_tile_pos(player_en->pos.y);
+			int tile_radius_x = 40;
+			int tile_radius_y = 30;
+			for (int x = player_tile_x - tile_radius_x; x < player_tile_x + tile_radius_x; x++)
 			{
-				if ((x + y) % 2 == 0)
+				for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++)
 				{
-					float x_pos = (x)*tile_width;
-					float y_pos = (y)*tile_width;
-					draw_rect(v2(x_pos, y_pos), v2(tile_width, tile_width), v4(0.1, 0.1, 0.1, 0.5));
+					Vector4 col = v4(0.1, 0.1, 0.1, 1.0);
+					if (x == mouse_tile_x && y == mouse_tile_y)
+					{
+						col = v4(0.5, 0.5, 0.5, 0.5);
+					}
+					float x_pos = x * tile_width;
+					float y_pos = y * tile_width;
+					draw_rect(v2(x_pos, y_pos), v2(tile_width, tile_width), col);
 				}
 			}
+
+			// draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), v4(0.5, 0.5, 0.5, 0.5));
 		}
+
 		// render
 
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
@@ -296,8 +303,8 @@ int entry(int argc, char **argv)
 				default:
 				{
 					Sprite *sprite = get_sprite(en->sprite_id);
-
 					Matrix4 xform = m4_scalar(1.0);
+					xform = m4_translate(xform, v3(0, (float)tile_width * -0.5, 0));
 					xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
 					xform = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
 					draw_image_xform(sprite->image, xform, sprite->size, COLOR_WHITE);

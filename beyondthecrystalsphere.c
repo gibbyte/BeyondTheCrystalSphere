@@ -267,7 +267,7 @@ int entry(int argc, char **argv)
 
 					if ((x + (y % 2 == 0)) % 2 == 0)
 					{
-						Vector4 col = v4(0.1, 0.1, 0.1, 0.1);
+						Vector4 col = v4(0.5, 0.5, 0.5, 0.1); // Lighter color
 						float x_pos = x * tile_width;
 						float y_pos = y * tile_width;
 						draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);

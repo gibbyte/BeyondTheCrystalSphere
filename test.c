@@ -48,11 +48,12 @@ typedef enum SpriteID
 {
 	SPRITE_nil,
 	SPRITE_player,
-	SPRITE_tree000,
-	SPRITE_tree001,
-	SPRITE_rock000,
+	SPRITE_tree0,
+	SPRITE_tree1,
+	SPRITE_rock0,
 	SPRITE_MAX,
 } SpriteID;
+// randy: maybe we make this an X macro?? https://chatgpt.com/share/260222eb-2738-4d1e-8b1d-4973a097814d
 Sprite sprites[SPRITE_MAX];
 Sprite *get_sprite(SpriteID id)
 {
@@ -62,6 +63,7 @@ Sprite *get_sprite(SpriteID id)
 	}
 	return &sprites[0];
 }
+
 typedef enum EntityArchetype
 {
 	arch_nil = 0,
@@ -78,7 +80,6 @@ typedef struct Entity
 	bool render_sprite;
 	SpriteID sprite_id;
 } Entity;
-
 #define MAX_ENTITY_COUNT 1024
 
 typedef struct World
@@ -89,7 +90,7 @@ World *world = 0;
 
 Entity *entity_create()
 {
-	Entity *entity_found = 0; // SCALE_400_PERCENT;
+	Entity *entity_found = 0;
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 	{
 		Entity *existing_entity = &world->entities[i];
@@ -99,7 +100,7 @@ Entity *entity_create()
 			break;
 		}
 	}
-	assert(entity_found, "No more entities left to create");
+	assert(entity_found, "No more free entities!");
 	entity_found->is_valid = true;
 	return entity_found;
 }
@@ -108,30 +109,30 @@ void entity_destroy(Entity *entity)
 {
 	memset(entity, 0, sizeof(Entity));
 }
+
 void setup_player(Entity *en)
 {
 	en->arch = arch_player;
 	en->sprite_id = SPRITE_player;
 }
+
 void setup_rock(Entity *en)
 {
 	en->arch = arch_rock;
-	en->sprite_id = SPRITE_rock000;
+	en->sprite_id = SPRITE_rock0;
 }
 
 void setup_tree(Entity *en)
 {
 	en->arch = arch_tree;
-	en->sprite_id = SPRITE_tree000;
-	//	en->sprite_id = SPRITE_tree001;
+	en->sprite_id = SPRITE_tree0;
+	// en->sprite_id = SPRITE_tree1;
 }
 
 Vector2 screen_to_world()
 {
-
 	float mouse_x = input_frame.mouse_x;
 	float mouse_y = input_frame.mouse_y;
-	// Compute the inverse matrices
 	Matrix4 proj = draw_frame.projection;
 	Matrix4 view = draw_frame.view;
 	float window_w = window.width;
@@ -153,24 +154,23 @@ Vector2 screen_to_world()
 
 int entry(int argc, char **argv)
 {
-	window.title = STR("Beyond The Crystal Sphere");
-	window.width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.title = STR("Randy's Game");
+	window.width = 1280;
 	window.height = 720;
 	window.x = 200;
 	window.y = 200;
-	window.clear_color = hex_to_rgba(0X081629FF); // Missing closing parenthesis added here
+	window.clear_color = hex_to_rgba(0x2a2d3aff);
 
 	world = alloc(get_heap_allocator(), sizeof(World));
 	memset(world, 0, sizeof(World));
 
-	sprites[SPRITE_player] = (Sprite){.image = load_image_from_disk(STR("asset/player.png"), get_heap_allocator()), .size = v2(6.0, 10.0)};
-	sprites[SPRITE_tree000] = (Sprite){.image = load_image_from_disk(STR("asset/tree000.png"), get_heap_allocator()), .size = v2(12.0, 21.0)};
-	sprites[SPRITE_tree001] = (Sprite){.image = load_image_from_disk(STR("asset/tree001.png"), get_heap_allocator()), .size = v2(12.0, 21.0)};
-	sprites[SPRITE_rock000] = (Sprite){.image = load_image_from_disk(STR("asset/rockore000.png"), get_heap_allocator()), .size = v2(6.0, 4.0)};
+	sprites[SPRITE_player] = (Sprite){.image = load_image_from_disk(STR("player.png"), get_heap_allocator()), .size = v2(6.0, 8.0)};
+	sprites[SPRITE_tree0] = (Sprite){.image = load_image_from_disk(STR("tree0.png"), get_heap_allocator()), .size = v2(7, 12)};
+	sprites[SPRITE_tree1] = (Sprite){.image = load_image_from_disk(STR("tree1.png"), get_heap_allocator()), .size = v2(7, 12)};
+	sprites[SPRITE_rock0] = (Sprite){.image = load_image_from_disk(STR("rock0.png"), get_heap_allocator()), .size = v2(7, 4)};
 
-	Gfx_Font *font = load_font_from_disk(STR("asset/Roboto-Regular.ttf"), get_heap_allocator());
-	assert(font, "Failed loading Roboto-Regular.ttf, %d", GetLastError());
-
+	Gfx_Font *font = load_font_from_disk(STR("C:/windows/fonts/arial.ttf"), get_heap_allocator());
+	assert(font, "Failed loading arial.ttf, %d", GetLastError());
 	const u32 font_height = 48;
 
 	Entity *player_en = entity_create();
@@ -205,35 +205,30 @@ int entry(int argc, char **argv)
 		reset_temporary_storage();
 		float64 now = os_get_current_time_in_seconds();
 		float64 delta_t = now - last_time;
-
-		// if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
 		last_time = now;
 		os_update();
 
 		draw_frame.projection = m4_make_orthographic_projection(window.width * -0.5, window.width * 0.5, window.height * -0.5, window.height * 0.5, -1, 10);
 
-		// Camera
+		// :camera
 		{
 			Vector2 target_pos = player_en->pos;
 			animate_v2_to_target(&camera_pos, target_pos, delta_t, 30.0f);
 
-			//	float zoom = 5.3;
 			draw_frame.view = m4_make_scale(v3(1.0, 1.0, 1.0));
 			draw_frame.view = m4_mul(draw_frame.view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0)));
 			draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0 / zoom, 1.0 / zoom, 1.0)));
 		}
 
-		// mouse pos in world space test
-
 		Vector2 mouse_pos = screen_to_world();
-		// log("%f, %f", input_frame.mouse_x, input_frame.mouse_y);
-		// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos.x, mouse_pos.y), font_height, mouse_pos, v2(0.1, 0.1), COLOR_RED);
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos.y);
+
 		// mouse pos in world space test
 		{
 			// log("%f, %f", mouse_pos.x, mouse_pos.y);
 			// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos.x, mouse_pos.y), font_height, mouse_pos, v2(0.1, 0.1), COLOR_RED);
+
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 			{
 				Entity *en = &world->entities[i];
@@ -254,7 +249,8 @@ int entry(int argc, char **argv)
 				}
 			}
 		}
-		// draw a bunch of Squares
+
+		// :tile rendering
 		{
 			int player_tile_x = world_pos_to_tile_pos(player_en->pos.x);
 			int player_tile_y = world_pos_to_tile_pos(player_en->pos.y);
@@ -264,7 +260,6 @@ int entry(int argc, char **argv)
 			{
 				for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++)
 				{
-
 					if ((x + (y % 2 == 0)) % 2 == 0)
 					{
 						Vector4 col = v4(0.1, 0.1, 0.1, 0.1);
@@ -278,8 +273,7 @@ int entry(int argc, char **argv)
 			draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), v4(0.5, 0.5, 0.5, 0.5));
 		}
 
-		// render
-
+		// :render
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
 			Entity *en = &world->entities[i];
@@ -299,6 +293,7 @@ int entry(int argc, char **argv)
 
 					// debug pos
 					// draw_text(font, sprint(temp, STR("%f %f"), en->pos.x, en->pos.y), font_height, en->pos, v2(0.1, 0.1), COLOR_WHITE);
+
 					break;
 				}
 				}

@@ -225,32 +225,39 @@ int entry(int argc, char **argv)
 
 		// mouse pos in world space test
 
-		Vector2 mouse_pos = screen_to_world();
+		Vector2 mouse_pos_world = screen_to_world();
 		// log("%f, %f", input_frame.mouse_x, input_frame.mouse_y);
-		// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos.x, mouse_pos.y), font_height, mouse_pos, v2(0.1, 0.1), COLOR_RED);
-		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos.x);
-		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos.y);
+		// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
+		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
+		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 		// mouse pos in world space test
 		{
-			// log("%f, %f", mouse_pos.x, mouse_pos.y);
-			// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos.x, mouse_pos.y), font_height, mouse_pos, v2(0.1, 0.1), COLOR_RED);
+			// log("%f, %f", mouse_pos_world.x, mouse_pos_world.y);
+			// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 			{
 				Entity *en = &world->entities[i];
 				if (en->is_valid)
 				{
 					Sprite *sprite = get_sprite(en->sprite_id);
+
+					v2_dist(en->pos, mouse_pos_world);
+
+					/*
 					Range2f bounds = range2f_make_bottom_center(sprite->size);
 					bounds = range2f_shift(bounds, en->pos);
+					bounds.min = v2_sub(bounds.min, v2(10.0, 10.0));
+					bounds.max = v2_add(bounds.max, v2(10.0, 10.0));SSS
 
 					Vector4 col = COLOR_WHITE;
 					col.a = 0.4;
-					if (range2f_contains(bounds, mouse_pos))
+					if (range2f_contains(bounds, mouse_pos_world))
 					{
 						col.a = 1.0;
 					}
 
 					draw_rect(bounds.min, range2f_size(bounds), col);
+					*/
 				}
 			}
 		}
@@ -275,7 +282,7 @@ int entry(int argc, char **argv)
 				}
 			}
 
-			draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), v4(0.5, 0.5, 0.5, 0.5));
+			// draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), v4(0.5, 0.5, 0.5, 0.5));
 		}
 
 		// render

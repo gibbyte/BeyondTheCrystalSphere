@@ -88,6 +88,12 @@ typedef struct World
 } World;
 World *world = 0;
 
+typedef struct WorldFrame
+{
+	Entity *selected_entity;
+} WorldFrame;
+WorldFrame world_frame;
+
 Entity *entity_create()
 {
 	Entity *entity_found = 0; // SCALE_400_PERCENT;
@@ -204,6 +210,7 @@ int entry(int argc, char **argv)
 	while (!window.should_close)
 	{
 		reset_temporary_storage();
+		world_frame = (WorldFrame){0};
 		float64 now = os_get_current_time_in_seconds();
 		float64 delta_t = now - last_time;
 
@@ -235,6 +242,9 @@ int entry(int argc, char **argv)
 		{
 			// log("%f, %f", mouse_pos_world.x, mouse_pos_world.y);
 			// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
+
+			float smallest_dist = 0;
+
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 			{
 				Entity *en = &world->entities[i];
@@ -245,10 +255,15 @@ int entry(int argc, char **argv)
 					int entity_tile_x = world_pos_to_tile_pos(en->pos.x);
 					int entity_tile_y = world_pos_to_tile_pos(en->pos.y);
 
-					if (fabsf(v2_dist(en->pos, mouse_pos_world)) < entity_selection_radius)
-						;
-					draw_rect(v2(tile_pos_to_world_pos(entity_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(entity_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), v4(0.5, 0.5, 0.5, 0.5));
-
+					float dist = fabsf(v2_dist(en->pos, mouse_pos_world));
+					if (dist < entity_selection_radius)
+					{
+						if (!world_frame.selected_entity || (dist < smallest_dist))
+						{
+							world_frame.selected_entity = en;
+						}
+						// draw_rect(v2(tile_pos_to_world_pos(entity_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(entity_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), v4(0.5, 0.5, 0.5, 0.5));
+					}
 					/*
 					Range2f bounds = range2f_make_bottom_center(sprite->size);
 					bounds = range2f_shift(bounds, en->pos);
@@ -310,7 +325,13 @@ int entry(int argc, char **argv)
 					xform = m4_translate(xform, v3(0, tile_width * -0.5, 0));
 					xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
 					xform = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
-					draw_image_xform(sprite->image, xform, sprite->size, COLOR_WHITE);
+
+					Vector4 col = COLOR_WHITE;
+					if (world_frame.selected_entity == en)
+					{
+						col = COLOR_RED;
+					}
+					draw_image_xform(sprite->image, xform, sprite->size, col);
 
 					// debug pos
 					// draw_text(font, sprint(temp, STR("%f %f"), en->pos.x, en->pos.y), font_height, en->pos, v2(0.1, 0.1), COLOR_WHITE);

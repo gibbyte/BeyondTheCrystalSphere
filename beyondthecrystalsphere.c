@@ -1,16 +1,19 @@
 const int tile_width = 8;
 const float entity_selection_radius = 16.0f;
 
+// Converts a world position to a tile position by dividing by the tile width and rounding.
 int world_pos_to_tile_pos(float world_pos)
 {
 	return roundf(world_pos / (float)tile_width);
 }
 
+// Converts a tile position to a world position by multiplying with the tile width.
 float tile_pos_to_world_pos(int tile_pos)
 {
 	return ((float)tile_pos * (float)tile_width);
 }
 
+// Rounds a world position to the nearest tile position.
 Vector2 round_v2_to_tile(Vector2 world_pos)
 {
 	world_pos.x = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.x));
@@ -18,11 +21,13 @@ Vector2 round_v2_to_tile(Vector2 world_pos)
 	return world_pos;
 }
 
+// Checks if two floating-point numbers are almost equal within a given epsilon.
 bool almost_equals(float a, float b, float epsilon)
 {
 	return fabs(a - b) <= epsilon;
 }
 
+// Animates a floating-point value towards a target value over time.
 bool animate_f32_to_target(float *value, float target, float delta_t, float rate)
 {
 	*value += (target - *value) * (1.0 - pow(2.0f, -rate * delta_t));
@@ -34,17 +39,21 @@ bool animate_f32_to_target(float *value, float target, float delta_t, float rate
 	return false;
 }
 
+// Animates a 2D vector towards a target vector over time.
 void animate_v2_to_target(Vector2 *value, Vector2 target, float delta_t, float rate)
 {
 	animate_f32_to_target(&(value->x), target.x, delta_t, rate);
 	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
 }
 
+// Structure representing a sprite with an image and size.
 typedef struct Sprite
 {
 	Gfx_Image *image;
 	Vector2 size;
 } Sprite;
+
+// Enumeration for sprite IDs.
 typedef enum SpriteID
 {
 	SPRITE_nil,
@@ -54,7 +63,11 @@ typedef enum SpriteID
 	SPRITE_rock000,
 	SPRITE_MAX,
 } SpriteID;
+
+// Array of sprites.
 Sprite sprites[SPRITE_MAX];
+
+// Retrieves a sprite by its ID.
 Sprite *get_sprite(SpriteID id)
 {
 	if (id >= 0 && id < SPRITE_MAX)
@@ -63,6 +76,8 @@ Sprite *get_sprite(SpriteID id)
 	}
 	return &sprites[0];
 }
+
+// Enumeration for entity archetypes.
 typedef enum EntityArchetype
 {
 	arch_nil = 0,
@@ -71,6 +86,7 @@ typedef enum EntityArchetype
 	arch_player = 3,
 } EntityArchetype;
 
+// Structure representing an entity.
 typedef struct Entity
 {
 	bool is_valid;
@@ -82,21 +98,24 @@ typedef struct Entity
 
 #define MAX_ENTITY_COUNT 1024
 
+// Structure representing the world with an array of entities.
 typedef struct World
 {
 	Entity entities[MAX_ENTITY_COUNT];
 } World;
 World *world = 0;
 
+// Structure representing the world frame with a selected entity.
 typedef struct WorldFrame
 {
 	Entity *selected_entity;
 } WorldFrame;
 WorldFrame world_frame;
 
+// Creates a new entity and returns a pointer to it.
 Entity *entity_create()
 {
-	Entity *entity_found = 0; // SCALE_400_PERCENT;
+	Entity *entity_found = 0;
 	for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 	{
 		Entity *existing_entity = &world->entities[i];
@@ -111,61 +130,62 @@ Entity *entity_create()
 	return entity_found;
 }
 
+// Destroys an entity by resetting its memory.
 void entity_destroy(Entity *entity)
 {
 	memset(entity, 0, sizeof(Entity));
 }
+
+// Sets up a player entity.
 void setup_player(Entity *en)
 {
 	en->arch = arch_player;
 	en->sprite_id = SPRITE_player;
 }
+
+// Sets up a rock entity.
 void setup_rock(Entity *en)
 {
 	en->arch = arch_rock;
 	en->sprite_id = SPRITE_rock000;
 }
 
+// Sets up a tree entity.
 void setup_tree(Entity *en)
 {
 	en->arch = arch_tree;
 	en->sprite_id = SPRITE_tree000;
-	//	en->sprite_id = SPRITE_tree001;
 }
 
+// Converts screen coordinates to world coordinates.
 Vector2 screen_to_world()
 {
-
 	float mouse_x = input_frame.mouse_x;
 	float mouse_y = input_frame.mouse_y;
-	// Compute the inverse matrices
 	Matrix4 proj = draw_frame.projection;
 	Matrix4 view = draw_frame.view;
 	float window_w = window.width;
 	float window_h = window.height;
 
-	// Normalize the mouse coordinates
 	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
 	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
 
-	// Transform to world coordinates
 	Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);
 	world_pos = m4_transform(m4_inverse(proj), world_pos);
 	world_pos = m4_transform(view, world_pos);
-	// log("%f, %f", world_pos.x, world_pos.y);
 
-	// Return as 2D vector
 	return (Vector2){world_pos.x, world_pos.y};
 }
 
+// Entry point of the program.
 int entry(int argc, char **argv)
 {
 	window.title = STR("Beyond The Crystal Sphere");
-	window.width = 1280; // We need to set the scaled size if we want to handle system scaling (DPI)
+	window.width = 1280;
 	window.height = 720;
 	window.x = 200;
 	window.y = 200;
-	window.clear_color = hex_to_rgba(0X081629FF); // Missing closing parenthesis added here
+	window.clear_color = hex_to_rgba(0X081629FF);
 
 	world = alloc(get_heap_allocator(), sizeof(World));
 	memset(world, 0, sizeof(World));
@@ -189,7 +209,6 @@ int entry(int argc, char **argv)
 		setup_rock(en);
 		en->pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
 		en->pos = round_v2_to_tile(en->pos);
-		// en->pos.y -= tile_width * 0.5;
 	}
 	for (int i = 0; i < 10; i++)
 	{
@@ -197,7 +216,6 @@ int entry(int argc, char **argv)
 		setup_tree(en);
 		en->pos = v2(get_random_float32_in_range(-200, 200), get_random_float32_in_range(-200, 200));
 		en->pos = round_v2_to_tile(en->pos);
-		// en->pos.y -= tile_width * 0.5;
 	}
 
 	float64 seconds_counter = 0.0;
@@ -214,7 +232,6 @@ int entry(int argc, char **argv)
 		float64 now = os_get_current_time_in_seconds();
 		float64 delta_t = now - last_time;
 
-		// if ((int)now != (int)last_time) log("%.2f FPS\n%.2fms", 1.0/(now-last_time), (now-last_time)*1000);
 		last_time = now;
 		os_update();
 
@@ -225,24 +242,18 @@ int entry(int argc, char **argv)
 			Vector2 target_pos = player_en->pos;
 			animate_v2_to_target(&camera_pos, target_pos, delta_t, 30.0f);
 
-			//	float zoom = 5.3;
 			draw_frame.view = m4_make_scale(v3(1.0, 1.0, 1.0));
 			draw_frame.view = m4_mul(draw_frame.view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0)));
 			draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0 / zoom, 1.0 / zoom, 1.0)));
 		}
 
-		// mouse pos in world space test
-
+		// Mouse position in world space
 		Vector2 mouse_pos_world = screen_to_world();
-		// log("%f, %f", input_frame.mouse_x, input_frame.mouse_y);
-		// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
 		int mouse_tile_x = world_pos_to_tile_pos(mouse_pos_world.x);
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
-		// mouse pos in world space test
-		{
-			// log("%f, %f", mouse_pos_world.x, mouse_pos_world.y);
-			// draw_text(font, sprint(temp, STR("%f %f"), mouse_pos_world.x, mouse_pos_world.y), font_height, mouse_pos_world, v2(0.1, 0.1), COLOR_RED);
 
+		// Entity selection based on mouse position
+		{
 			float smallest_dist = 0;
 
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
@@ -262,28 +273,12 @@ int entry(int argc, char **argv)
 						{
 							world_frame.selected_entity = en;
 						}
-						// draw_rect(v2(tile_pos_to_world_pos(entity_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(entity_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), v4(0.5, 0.5, 0.5, 0.5));
 					}
-					/*
-					Range2f bounds = range2f_make_bottom_center(sprite->size);
-					bounds = range2f_shift(bounds, en->pos);
-					bounds.min = v2_sub(bounds.min, v2(10.0, 10.0));
-					bounds.max = v2_add(bounds.max, v2(10.0, 10.0));SSS
-
-					Vector4 col = COLOR_WHITE;
-					col.a = 0.4;
-					if (range2f_contains(bounds, mouse_pos_world))
-					{
-						col.a = 1.0;
-					}
-
-					draw_rect(bounds.min, range2f_size(bounds), col);
-					*/
 				}
 			}
 		}
 
-		// draw a bunch of Squares
+		// Draw a bunch of squares
 		{
 			int player_tile_x = world_pos_to_tile_pos(player_en->pos.x);
 			int player_tile_y = world_pos_to_tile_pos(player_en->pos.y);
@@ -293,7 +288,6 @@ int entry(int argc, char **argv)
 			{
 				for (int y = player_tile_y - tile_radius_y; y < player_tile_y + tile_radius_y; y++)
 				{
-
 					if ((x + (y % 2 == 0)) % 2 == 0)
 					{
 						Vector4 col = v4(0.5, 0.5, 0.5, 0.1); // Lighter color
@@ -303,21 +297,16 @@ int entry(int argc, char **argv)
 					}
 				}
 			}
-
-			// draw_rect(v2(tile_pos_to_world_pos(mouse_tile_x) + tile_width * -0.5, tile_pos_to_world_pos(mouse_tile_y) + tile_width * -0.5), v2(tile_width, tile_width), v4(0.5, 0.5, 0.5, 0.5));
 		}
 
-		// render
-
+		// Render entities
 		for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 		{
 			Entity *en = &world->entities[i];
 			if (en->is_valid)
 			{
-
 				switch (en->arch)
 				{
-
 				default:
 				{
 					Sprite *sprite = get_sprite(en->sprite_id);
@@ -332,15 +321,13 @@ int entry(int argc, char **argv)
 						col = COLOR_RED;
 					}
 					draw_image_xform(sprite->image, xform, sprite->size, col);
-
-					// debug pos
-					// draw_text(font, sprint(temp, STR("%f %f"), en->pos.x, en->pos.y), font_height, en->pos, v2(0.1, 0.1), COLOR_WHITE);
 					break;
 				}
 				}
 			}
 		}
 
+		// Handle input
 		if (is_key_just_pressed(KEY_ESCAPE))
 		{
 			window.should_close = true;
@@ -372,7 +359,6 @@ int entry(int argc, char **argv)
 		frame_count += 1;
 		if (seconds_counter > 1.0)
 		{
-			// log("fps: %i", frame_count);
 			seconds_counter = 0.0;
 			frame_count = 0;
 		}

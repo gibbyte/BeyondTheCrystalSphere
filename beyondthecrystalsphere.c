@@ -1,6 +1,9 @@
 const int tile_width = 8;
 const float entity_selection_radius = 16.0f;
 
+const int rock000_health = 3;
+const int tree000_health = 3;
+
 // Converts a world position to a tile position by dividing by the tile width and rounding.
 int world_pos_to_tile_pos(float world_pos)
 {
@@ -81,8 +84,8 @@ Sprite *get_sprite(SpriteID id)
 typedef enum EntityArchetype
 {
 	arch_nil = 0,
-	arch_rock = 1,
-	arch_tree = 2,
+	arch_rock000 = 1,
+	arch_tree000 = 2,
 	arch_player = 3,
 } EntityArchetype;
 
@@ -94,6 +97,7 @@ typedef struct Entity
 	Vector2 pos;
 	bool render_sprite;
 	SpriteID sprite_id;
+	int health;
 } Entity;
 
 #define MAX_ENTITY_COUNT 1024
@@ -146,15 +150,17 @@ void setup_player(Entity *en)
 // Sets up a rock entity.
 void setup_rock(Entity *en)
 {
-	en->arch = arch_rock;
+	en->arch = arch_rock000;
 	en->sprite_id = SPRITE_rock000;
+	en->health = rock000_health;
 }
 
 // Sets up a tree entity.
 void setup_tree(Entity *en)
 {
-	en->arch = arch_tree;
+	en->arch = arch_tree000;
 	en->sprite_id = SPRITE_tree000;
+	en->health = tree000_health;
 }
 
 // Converts screen coordinates to world coordinates.
@@ -253,8 +259,10 @@ int entry(int argc, char **argv)
 		int mouse_tile_y = world_pos_to_tile_pos(mouse_pos_world.y);
 
 		// Entity selection based on mouse position
+
+		Entity *selected_entity;
 		{
-			float smallest_dist = 0;
+			float smallest_dist = INFINITY;
 
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 			{
@@ -272,6 +280,7 @@ int entry(int argc, char **argv)
 						if (!world_frame.selected_entity || (dist < smallest_dist))
 						{
 							world_frame.selected_entity = en;
+							smallest_dist = dist;
 						}
 					}
 				}
@@ -294,6 +303,23 @@ int entry(int argc, char **argv)
 						float x_pos = x * tile_width;
 						float y_pos = y * tile_width;
 						draw_rect(v2(x_pos + tile_width * -0.5, y_pos + tile_width * -0.5), v2(tile_width, tile_width), col);
+					}
+				}
+			}
+		}
+		// clicky mc clickface
+		{
+			Entity *selected_en = world_frame.selected_entity;
+
+			if (is_key_just_pressed(MOUSE_BUTTON_LEFT))
+			{
+				consume_key_just_pressed(MOUSE_BUTTON_LEFT);
+				if (selected_en)
+				{
+					selected_en->health -= 1;
+					if (selected_en->health <= 0)
+					{
+						entity_destroy(selected_en);
 					}
 				}
 			}

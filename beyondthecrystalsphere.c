@@ -53,7 +53,6 @@ void animate_v2_to_target(Vector2 *value, Vector2 target, float delta_t, float r
 typedef struct Sprite
 {
 	Gfx_Image *image;
-	Vector2 size;
 } Sprite;
 
 // Enumeration for sprite IDs.
@@ -64,6 +63,8 @@ typedef enum SpriteID
 	SPRITE_tree000,
 	SPRITE_tree001,
 	SPRITE_rock000,
+	SPRITE_item_oxygenplant000,
+	SPRITE_item_tree001,
 	SPRITE_MAX,
 } SpriteID;
 
@@ -80,6 +81,11 @@ Sprite *get_sprite(SpriteID id)
 	return &sprites[0];
 }
 
+Vector2 get_sprite_size(Sprite *sprite)
+{
+	return (Vector2){sprite->image->width, sprite->image->height};
+}
+
 // Enumeration for entity archetypes.
 typedef enum EntityArchetype
 {
@@ -87,6 +93,10 @@ typedef enum EntityArchetype
 	arch_rock000 = 1,
 	arch_tree000 = 2,
 	arch_player = 3,
+
+	arch_item_oxygenplant000 = 4,
+	arch_item_tree001 = 5,
+	ARCH_MAX,
 } EntityArchetype;
 
 // Structure representing an entity.
@@ -163,6 +173,18 @@ void setup_tree(Entity *en)
 	en->health = tree000_health;
 }
 
+void setup_item_oxygenplant000(Entity *en)
+{
+	en->arch = arch_item_oxygenplant000;
+	en->sprite_id = SPRITE_item_oxygenplant000;
+}
+
+void setup_item_tree001(Entity *en)
+{
+	en->arch = arch_item_tree001;
+	en->sprite_id = SPRITE_item_tree001;
+}
+
 // Converts screen coordinates to world coordinates.
 Vector2 screen_to_world()
 {
@@ -196,10 +218,18 @@ int entry(int argc, char **argv)
 	world = alloc(get_heap_allocator(), sizeof(World));
 	memset(world, 0, sizeof(World));
 
-	sprites[SPRITE_player] = (Sprite){.image = load_image_from_disk(STR("asset/player.png"), get_heap_allocator()), .size = v2(6.0, 10.0)};
-	sprites[SPRITE_tree000] = (Sprite){.image = load_image_from_disk(STR("asset/tree000.png"), get_heap_allocator()), .size = v2(12.0, 21.0)};
-	sprites[SPRITE_tree001] = (Sprite){.image = load_image_from_disk(STR("asset/tree001.png"), get_heap_allocator()), .size = v2(12.0, 21.0)};
-	sprites[SPRITE_rock000] = (Sprite){.image = load_image_from_disk(STR("asset/rockore000.png"), get_heap_allocator()), .size = v2(6.0, 4.0)};
+	sprites[SPRITE_player] = (Sprite){
+		.image = load_image_from_disk(STR("asset/player.png"), get_heap_allocator())};
+	sprites[SPRITE_tree000] = (Sprite){
+		.image = load_image_from_disk(STR("asset/tree000.png"), get_heap_allocator())};
+	sprites[SPRITE_tree001] = (Sprite){
+		.image = load_image_from_disk(STR("asset/tree001.png"), get_heap_allocator())};
+	sprites[SPRITE_rock000] = (Sprite){
+		.image = load_image_from_disk(STR("asset/rockore000.png"), get_heap_allocator())};
+	sprites[SPRITE_item_oxygenplant000] = (Sprite){
+		.image = load_image_from_disk(STR("asset/item_oxygenplant000.png"), get_heap_allocator())};
+	sprites[SPRITE_item_tree001] = (Sprite){
+		.image = load_image_from_disk(STR("asset/item_tree001.png"), get_heap_allocator())};
 
 	Gfx_Font *font = load_font_from_disk(STR("asset/Roboto-Regular.ttf"), get_heap_allocator());
 	assert(font, "Failed loading Roboto-Regular.ttf, %d", GetLastError());
@@ -336,17 +366,34 @@ int entry(int argc, char **argv)
 				default:
 				{
 					Sprite *sprite = get_sprite(en->sprite_id);
+					if (sprite == NULL)
+					{
+						// Handle error or continue to the next entity
+						continue;
+					}
+
+					// Get the size of the sprite
+					Vector2 sprite_size = get_sprite_size(sprite);
+
+					// Initialize the transformation matrix with a scalar value of 1.0 (identity matrix)
 					Matrix4 xform = m4_scalar(1.0);
+
+					// Apply translations to the transformation matrix
 					xform = m4_translate(xform, v3(0, tile_width * -0.5, 0));
 					xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
-					xform = m4_translate(xform, v3(sprite->size.x * -0.5, 0.0, 0));
+					xform = m4_translate(xform, v3(sprite_size.x * -0.5, 0.0, 0));
 
+					// Set the color to white by default
 					Vector4 col = COLOR_WHITE;
+
+					// Change color to red if the entity is the selected entity
 					if (world_frame.selected_entity == en)
 					{
 						col = COLOR_RED;
 					}
-					draw_image_xform(sprite->image, xform, sprite->size, col);
+
+					// Draw the sprite with the transformed matrix and the selected color
+					draw_image_xform(sprite->image, xform, sprite_size, col);
 					break;
 				}
 				}

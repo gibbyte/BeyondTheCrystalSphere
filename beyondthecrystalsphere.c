@@ -1,27 +1,23 @@
-const int tile_width = 8;
-const float entity_selection_radius = 16.0f;
-
-const int rock000_health = 3;
-const int tree000_health = 3;
-
-// Converts a world position to a tile position by dividing by the tile width and rounding.
-int world_pos_to_tile_pos(float world_pos)
+/*
+// engine changes
+inline float32 v2_length(Vector2 a)
 {
-	return roundf(world_pos / (float)tile_width);
+	return sqrt(a.x * a.x + a.y * a.y);
 }
 
-// Converts a tile position to a world position by multiplying with the tile width.
-float tile_pos_to_world_pos(int tile_pos)
+// added please remove
+inline float v2_dist(Vector2 a, Vector2 b)
 {
-	return ((float)tile_pos * (float)tile_width);
+	return v2_length(v2_sub(a, b));
 }
 
-// Rounds a world position to the nearest tile position.
-Vector2 round_v2_to_tile(Vector2 world_pos)
+*/
+// 0 -> 1
+
+// Item drops move up and down
+float sin_breathe(float time, float rate)
 {
-	world_pos.x = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.x));
-	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
-	return world_pos;
+	return (sin(time * rate) + 1.0 / 2.0);
 }
 
 // Checks if two floating-point numbers are almost equal within a given epsilon.
@@ -49,6 +45,35 @@ void animate_v2_to_target(Vector2 *value, Vector2 target, float delta_t, float r
 	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
 }
 
+// generic utils
+
+// utils
+const int tile_width = 8;
+const float entity_selection_radius = 16.0f;
+
+const int rock000_health = 3;
+const int tree000_health = 3;
+
+// Converts a world position to a tile position by dividing by the tile width and rounding.
+int world_pos_to_tile_pos(float world_pos)
+{
+	return roundf(world_pos / (float)tile_width);
+}
+
+// Converts a tile position to a world position by multiplying with the tile width.
+float tile_pos_to_world_pos(int tile_pos)
+{
+	return ((float)tile_pos * (float)tile_width);
+}
+
+// Rounds a world position to the nearest tile position.
+Vector2 round_v2_to_tile(Vector2 world_pos)
+{
+	world_pos.x = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.x));
+	world_pos.y = tile_pos_to_world_pos(world_pos_to_tile_pos(world_pos.y));
+	return world_pos;
+}
+
 // Structure representing a sprite with an image and size.
 typedef struct Sprite
 {
@@ -64,7 +89,7 @@ typedef enum SpriteID
 	SPRITE_tree001,
 	SPRITE_rock000,
 	SPRITE_item_oxygenplant000,
-	SPRITE_item_tree001,
+	SPRITE_item_wood_tree000,
 	SPRITE_MAX,
 } SpriteID;
 
@@ -95,7 +120,7 @@ typedef enum EntityArchetype
 	arch_player = 3,
 
 	arch_item_oxygenplant000 = 4,
-	arch_item_tree001 = 5,
+	arch_item_wood_tree000 = 5,
 	ARCH_MAX,
 } EntityArchetype;
 
@@ -108,6 +133,8 @@ typedef struct Entity
 	bool render_sprite;
 	SpriteID sprite_id;
 	int health;
+	bool destroyable_world_item;
+	bool is_item;
 } Entity;
 
 #define MAX_ENTITY_COUNT 1024
@@ -163,6 +190,7 @@ void setup_rock(Entity *en)
 	en->arch = arch_rock000;
 	en->sprite_id = SPRITE_rock000;
 	en->health = rock000_health;
+	en->destroyable_world_item = true;
 }
 
 // Sets up a tree entity.
@@ -171,6 +199,7 @@ void setup_tree(Entity *en)
 	en->arch = arch_tree000;
 	en->sprite_id = SPRITE_tree000;
 	en->health = tree000_health;
+	en->destroyable_world_item = true;
 }
 
 void setup_item_oxygenplant000(Entity *en)
@@ -179,10 +208,11 @@ void setup_item_oxygenplant000(Entity *en)
 	en->sprite_id = SPRITE_item_oxygenplant000;
 }
 
-void setup_item_tree001(Entity *en)
+void setup_item_wood_tree000(Entity *en)
 {
-	en->arch = arch_item_tree001;
-	en->sprite_id = SPRITE_item_tree001;
+	en->arch = arch_item_wood_tree000;
+	en->sprite_id = SPRITE_item_wood_tree000;
+	en->is_item = true;
 }
 
 // Converts screen coordinates to world coordinates.
@@ -228,8 +258,8 @@ int entry(int argc, char **argv)
 		.image = load_image_from_disk(STR("asset/rockore000.png"), get_heap_allocator())};
 	sprites[SPRITE_item_oxygenplant000] = (Sprite){
 		.image = load_image_from_disk(STR("asset/item_oxygenplant000.png"), get_heap_allocator())};
-	sprites[SPRITE_item_tree001] = (Sprite){
-		.image = load_image_from_disk(STR("asset/item_tree001.png"), get_heap_allocator())};
+	sprites[SPRITE_item_wood_tree000] = (Sprite){
+		.image = load_image_from_disk(STR("asset/item_wood_tree000.png"), get_heap_allocator())};
 
 	Gfx_Font *font = load_font_from_disk(STR("asset/Roboto-Regular.ttf"), get_heap_allocator());
 	assert(font, "Failed loading Roboto-Regular.ttf, %d", GetLastError());
@@ -297,7 +327,7 @@ int entry(int argc, char **argv)
 			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
 			{
 				Entity *en = &world->entities[i];
-				if (en->is_valid)
+				if (en->is_valid && en->destroyable_world_item)
 				{
 					Sprite *sprite = get_sprite(en->sprite_id);
 
@@ -349,6 +379,28 @@ int entry(int argc, char **argv)
 					selected_en->health -= 1;
 					if (selected_en->health <= 0)
 					{
+						switch (selected_en->arch)
+						{
+						case arch_tree000:
+						{
+							Entity *en = entity_create();
+							setup_item_wood_tree000(en);
+							en->pos = selected_en->pos;
+						}
+						break;
+
+						case arch_rock000:
+						{
+							// Drop item
+						}
+						break;
+
+						default:
+						{
+						}
+						break;
+						}
+
 						entity_destroy(selected_en);
 					}
 				}
@@ -379,6 +431,11 @@ int entry(int argc, char **argv)
 					Matrix4 xform = m4_scalar(1.0);
 
 					// Apply translations to the transformation matrix
+					if (en->is_item)
+					{
+						xform = m4_translate(xform, v3(0, 2.0 * sin_breathe(os_get_current_time_in_seconds(), 5.0), 0));
+					}
+
 					xform = m4_translate(xform, v3(0, tile_width * -0.5, 0));
 					xform = m4_translate(xform, v3(en->pos.x, en->pos.y, 0));
 					xform = m4_translate(xform, v3(sprite_size.x * -0.5, 0.0, 0));

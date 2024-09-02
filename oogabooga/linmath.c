@@ -159,7 +159,7 @@ inline Vector4 v4_divf(Vector4 a, float32 s)
 {
     return v4_div(a, v4(s, s, s, s));
 }
-
+/**/
 inline float32 v2_length(Vector2 a)
 {
     return sqrt(a.x * a.x + a.y * a.y);

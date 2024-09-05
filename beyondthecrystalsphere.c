@@ -50,6 +50,7 @@ void animate_v2_to_target(Vector2 *value, Vector2 target, float delta_t, float r
 // utils
 const int tile_width = 8;
 const float entity_selection_radius = 16.0f;
+const float player_pickup_radius = 16.0f;
 
 const int rock000_health = 3;
 const int tree000_health = 3;
@@ -139,10 +140,21 @@ typedef struct Entity
 
 #define MAX_ENTITY_COUNT 1024
 
+typedef struct ItemData
+{
+
+	int amount;
+
+} ItemData;
+
 // Structure representing the world with an array of entities.
 typedef struct World
 {
+
 	Entity entities[MAX_ENTITY_COUNT];
+
+	ItemData inventory_items[ARCH_MAX];
+
 } World;
 World *world = 0;
 
@@ -266,6 +278,10 @@ int entry(int argc, char **argv)
 
 	const u32 font_height = 48;
 
+	// test item adding
+	{
+		world->inventory_items[arch_item_wood_tree000].amount = 5;
+	}
 	Entity *player_en = entity_create();
 	setup_player(player_en);
 
@@ -367,6 +383,30 @@ int entry(int argc, char **argv)
 				}
 			}
 		}
+
+		// pick up near by items use phyisc to pull in item
+		{
+			for (int i = 0; i < MAX_ENTITY_COUNT; i++)
+			{
+				Entity *en = &world->entities[i];
+				if (en->is_valid && en->is_item)
+				{
+					if (v2_dist(en->pos, player_en->pos) < 1.0f)
+					{
+						world->inventory_items[en->arch].amount += 1;
+						entity_destroy(en);
+					}
+					else if (v2_dist(en->pos, player_en->pos) < player_pickup_radius)
+					{
+						Vector2 direction = v2_sub(player_en->pos, en->pos);
+						float distance = v2_length(direction);
+						Vector2 force = v2_mulf(v2_normalize(direction), 1000.0f / (distance * distance));
+						en->pos = v2_add(en->pos, v2_mulf(force, delta_t));
+					}
+				}
+			}
+		}
+
 		// clicky mc clickface
 		{
 			Entity *selected_en = world_frame.selected_entity;

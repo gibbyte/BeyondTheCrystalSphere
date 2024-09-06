@@ -400,7 +400,7 @@ int entry(int argc, char **argv)
 					{
 						Vector2 direction = v2_sub(player_en->pos, en->pos);
 						float distance = v2_length(direction);
-						Vector2 force = v2_mulf(v2_normalize(direction), 1000.0f / (distance * distance));
+						Vector2 force = v2_mulf(v2_normalize(direction), 9000.0f / (distance * distance));
 						en->pos = v2_add(en->pos, v2_mulf(force, delta_t));
 					}
 				}
@@ -495,6 +495,32 @@ int entry(int argc, char **argv)
 				}
 				}
 			}
+		}
+		// Render UI
+		{
+
+			draw_frame.view = m4_scalar(1.0);
+			draw_frame.projection = m4_make_orthographic_projection(0.0, 240.0, 0.0, 135.0, -1, 10);
+
+			float x_pos = 30.0;
+			float y_pos = 30.0;
+
+			// Correctly declare the array
+			ItemData *inv_items[128];
+			int inv_item_count = 0;
+			for (int i = 0; i < ARCH_MAX; i++)
+			{
+				ItemData *item = &world->inventory_items[i];
+				if (item->amount > 0)
+				{
+					inv_items[inv_item_count] = item;
+					inv_item_count += 1;
+				}
+			}
+
+			Matrix4 xform = m4_scalar(1.0);
+			xform = m4_translate(xform, v3(x_pos, y_pos, 0.0));
+			draw_rect_xform(xform, v2(8, 8), COLOR_WHITE);
 		}
 
 		// Handle input

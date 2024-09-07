@@ -1,17 +1,20 @@
 {
     "configurations": [
         {
-            "name": "Win32",
+            "name": "windows-msvc-x64",
             "includePath": [
                 "${workspaceFolder}/**"
             ],
-            "defines": ["DEBUG"],
+            "defines": [
+                "DEBUG"
+            ],
             "forcedInclude": [
                 "build.c"
             ],
-            "intelliSenseMode": "clang-x64",
-            "compilerPath": "C:/Program Files/LLVM/bin/clang",
-            "cStandard": "c11"
+            "intelliSenseMode": "windows-msvc-x64",
+            "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.40.33807/bin/Hostx64/x64/cl.exe",
+            "cStandard": "${default}",
+            "cppStandard": "${default}"
         }
     ],
     "version": 4

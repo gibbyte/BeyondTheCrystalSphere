@@ -90,6 +90,7 @@ typedef enum SpriteID
 	SPRITE_rock000,
 	SPRITE_item_oxygenplant000,
 	SPRITE_item_wood_tree000,
+	SPRITE_item_ore_rock000,
 	SPRITE_MAX,
 } SpriteID;
 
@@ -121,8 +122,30 @@ typedef enum EntityArchetype
 
 	arch_item_oxygenplant000 = 4,
 	arch_item_wood_tree000 = 5,
+	arch_item_ore_rock000 = 6,
 	ARCH_MAX,
 } EntityArchetype;
+
+SpriteID get_sprite_id_from_archetype(EntityArchetype arch)
+{
+	switch (arch)
+	{
+	case arch_rock000:
+		return SPRITE_rock000;
+	case arch_tree000:
+		return SPRITE_tree000;
+	case arch_player:
+		return SPRITE_player;
+	case arch_item_oxygenplant000:
+		return SPRITE_item_oxygenplant000;
+	case arch_item_wood_tree000:
+		return SPRITE_item_wood_tree000;
+	case arch_item_ore_rock000:
+		return SPRITE_item_ore_rock000;
+	default:
+		return 0;
+	}
+}
 
 // Structure representing an entity.
 typedef struct Entity
@@ -141,7 +164,6 @@ typedef struct Entity
 
 typedef struct ItemData
 {
-
 	int amount;
 
 } ItemData;
@@ -226,6 +248,12 @@ void setup_item_wood_tree000(Entity *en)
 	en->is_item = true;
 }
 
+void setup_item_ore_rock000(Entity *en)
+{
+	en->arch = arch_item_ore_rock000;
+	en->sprite_id = SPRITE_item_ore_rock000;
+	en->is_item = true;
+}
 // Converts screen coordinates to world coordinates.
 Vector2 screen_to_world()
 {
@@ -259,6 +287,8 @@ int entry(int argc, char **argv)
 	world = alloc(get_heap_allocator(), sizeof(World));
 	memset(world, 0, sizeof(World));
 
+	sprites[0] = (Sprite){
+		.image = load_image_from_disk(STR("asset/missing_tex.png"), get_heap_allocator())};
 	sprites[SPRITE_player] = (Sprite){
 		.image = load_image_from_disk(STR("asset/player.png"), get_heap_allocator())};
 	sprites[SPRITE_tree000] = (Sprite){
@@ -266,11 +296,13 @@ int entry(int argc, char **argv)
 	sprites[SPRITE_tree001] = (Sprite){
 		.image = load_image_from_disk(STR("asset/tree001.png"), get_heap_allocator())};
 	sprites[SPRITE_rock000] = (Sprite){
-		.image = load_image_from_disk(STR("asset/rockore000.png"), get_heap_allocator())};
+		.image = load_image_from_disk(STR("asset/rock000.png"), get_heap_allocator())};
 	sprites[SPRITE_item_oxygenplant000] = (Sprite){
 		.image = load_image_from_disk(STR("asset/item_oxygenplant000.png"), get_heap_allocator())};
 	sprites[SPRITE_item_wood_tree000] = (Sprite){
 		.image = load_image_from_disk(STR("asset/item_wood_tree000.png"), get_heap_allocator())};
+	sprites[SPRITE_item_ore_rock000] = (Sprite){
+		.image = load_image_from_disk(STR("asset/item_ore_rock000.png"), get_heap_allocator())};
 
 	Gfx_Font *font = load_font_from_disk(STR("asset/Roboto-Regular.ttf"), get_heap_allocator());
 	assert(font, "Failed loading Roboto-Regular.ttf, %d", GetLastError());
@@ -280,6 +312,7 @@ int entry(int argc, char **argv)
 	// test item adding
 	{
 		world->inventory_items[arch_item_wood_tree000].amount = 5;
+		world->inventory_items[arch_item_ore_rock000].amount = 5;
 	}
 	Entity *player_en = entity_create();
 	setup_player(player_en);
@@ -430,7 +463,9 @@ int entry(int argc, char **argv)
 
 						case arch_rock000:
 						{
-							// Drop item
+							Entity *en = entity_create();
+							setup_item_ore_rock000(en);
+							en->pos = selected_en->pos;
 						}
 						break;
 
@@ -495,31 +530,53 @@ int entry(int argc, char **argv)
 				}
 			}
 		}
-		// Render UI
+		// do UI rendering
 		{
-
+			float width = 240.0;
+			float height = 135.0;
 			draw_frame.camera_xform = m4_scalar(1.0);
-			draw_frame.projection = m4_make_orthographic_projection(0.0, 240.0, 0.0, 135.0, -1, 10);
+			draw_frame.projection = m4_make_orthographic_projection(0.0, width, 0.0, height, -1, 10);
 
-			float x_pos = 30.0;
-			float y_pos = 30.0;
+			float y_pos = 70.0;
 
-			// Correctly declare the array
-			ItemData *inv_items[128];
-			int inv_item_count = 0;
+			int item_count = 0;
 			for (int i = 0; i < ARCH_MAX; i++)
 			{
 				ItemData *item = &world->inventory_items[i];
 				if (item->amount > 0)
 				{
-					inv_items[inv_item_count] = item;
-					inv_item_count += 1;
+					item_count += 1;
 				}
 			}
 
-			Matrix4 xform = m4_scalar(1.0);
-			xform = m4_translate(xform, v3(x_pos, y_pos, 0.0));
-			draw_rect_xform(xform, v2(8, 8), COLOR_WHITE);
+			const float icon_thing = 8.0;
+			const float padding = 2.0;
+			float icon_width = icon_thing + padding;
+
+			float entire_thing_width_idk = item_count * icon_width;
+			float x_start_pos = (width / 2.0) - (entire_thing_width_idk / 2.0) + (icon_width * 0.5);
+
+			int slot_index = 0;
+			for (int i = 0; i < ARCH_MAX; i++)
+			{
+				ItemData *item = &world->inventory_items[i];
+				if (item->amount > 0)
+				{
+
+					float slot_index_offset = slot_index * icon_width;
+
+					Matrix4 xform = m4_scalar(1.0);
+					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
+					xform = m4_translate(xform, v3(-4, -4, 0.0));
+					draw_rect_xform(xform, v2(8, 8), COLOR_BLACK);
+
+					Sprite *sprite = get_sprite(get_sprite_id_from_archetype(i));
+
+					draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
+
+					slot_index += 1;
+				}
+			}
 		}
 
 		// Handle input

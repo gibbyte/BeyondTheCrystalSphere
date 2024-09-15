@@ -11,6 +11,7 @@ inline float v2_dist(Vector2 a, Vector2 b)
 	return v2_length(v2_sub(a, b));
 }
 
+#define m4_identity() m4_make_scale(v3(1, 1, 1))
 // 0 -> 1
 
 // Item drops move up and down
@@ -310,10 +311,10 @@ int entry(int argc, char **argv)
 	const u32 font_height = 48;
 
 	// test item adding
-	{
-		world->inventory_items[arch_item_wood_tree000].amount = 5;
-		world->inventory_items[arch_item_ore_rock000].amount = 5;
-	}
+	//{
+	world->inventory_items[arch_item_wood_tree000].amount = 5;
+	// world->inventory_items[arch_item_ore_rock000].amount = 5;
+	//}
 	Entity *player_en = entity_create();
 	setup_player(player_en);
 
@@ -550,11 +551,18 @@ int entry(int argc, char **argv)
 			}
 
 			const float icon_thing = 8.0;
-			const float padding = 2.0;
-			float icon_width = icon_thing + padding;
+			// const float padding = 2.0;
+			float icon_width = icon_thing;
 
-			float entire_thing_width_idk = item_count * icon_width;
-			float x_start_pos = (width / 2.0) - (entire_thing_width_idk / 2.0) + (icon_width * 0.5);
+			const int icon_row_count = 8;
+
+			float entire_thing_width_idk = icon_row_count * icon_width;
+			float x_start_pos = (width / 2.0) - (entire_thing_width_idk / 2.0);
+			{
+				Matrix4 xform = m4_identity();
+				xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
+				draw_rect_xform(xform, v2(entire_thing_width_idk, icon_width), v4(0, 0, 0, 0.5));
+			}
 
 			int slot_index = 0;
 			for (int i = 0; i < ARCH_MAX; i++)
@@ -567,11 +575,10 @@ int entry(int argc, char **argv)
 
 					Matrix4 xform = m4_scalar(1.0);
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
-					xform = m4_translate(xform, v3(-4, -4, 0.0));
-					draw_rect_xform(xform, v2(8, 8), COLOR_BLACK);
+					// xform = m4_translate(xform, v3(-4, -4, 0.0));
 
 					Sprite *sprite = get_sprite(get_sprite_id_from_archetype(i));
-
+					draw_rect_xform(xform, v2(8, 8), v4(1, 1, 1, 0.2));
 					draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
 
 					slot_index += 1;

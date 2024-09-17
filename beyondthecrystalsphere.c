@@ -575,11 +575,28 @@ int entry(int argc, char **argv)
 
 					Matrix4 xform = m4_scalar(1.0);
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
-					// xform = m4_translate(xform, v3(-4, -4, 0.0));
 
 					Sprite *sprite = get_sprite(get_sprite_id_from_archetype(i));
 					draw_rect_xform(xform, v2(8, 8), v4(1, 1, 1, 0.2));
+
+					Matrix4 box_bottom_right_xform = xform;
+					xform = m4_translate(xform, v3(icon_width * 0.5, icon_width * 0.5, 0.0));
+
+					//{
+					//	float scale_adjust = 0.1 * sin_breathe(os_get_elapsed_seconds(), 20.0);
+					//	xform = m4_scale(xform, v3(1.0 + scale_adjust, 1.0 + scale_adjust, 1.0));
+					//}
+					// rotate.....
+					//{
+					//	float rotate_adjust = PI32 * 2.0 * sin_breathe(os_get_elapsed_seconds(), 1.0);
+					//	xform = m4_rotate_z(xform, rotate_adjust);
+					//}
+					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, get_sprite_size(sprite).y * -0.5, 0));
+
 					draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
+
+					// draw amount
+					draw_text_xform(font, STR("5"), font_height, box_bottom_right_xform, v2(0.1, 0.1), COLOR_WHITE);
 
 					slot_index += 1;
 				}

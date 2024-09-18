@@ -45,6 +45,10 @@ void animate_v2_to_target(Vector2 *value, Vector2 target, float delta_t, float r
 	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
 }
 
+Range2f quad_to_range(Draw_Quad *quad)
+{
+	return (Range2f){quad->bottom_left, quad->top_right};
+}
 // generic utils
 
 // utils
@@ -577,7 +581,12 @@ int entry(int argc, char **argv)
 					xform = m4_translate(xform, v3(x_start_pos + slot_index_offset, y_pos, 0.0));
 
 					Sprite *sprite = get_sprite(get_sprite_id_from_archetype(i));
-					draw_rect_xform(xform, v2(8, 8), v4(1, 1, 1, 0.2));
+
+					Draw_Quad *quad = draw_rect_xform(xform, v2(8, 8), v4(1, 1, 1, 0.2));
+					{
+						Range2f box = quad_to_range(quad);
+						log_info("box: %f %f %f %f", box.min.x, box.min.y, box.max.x, box.max.y);
+					}
 
 					Matrix4 box_bottom_right_xform = xform;
 					xform = m4_translate(xform, v3(icon_width * 0.5, icon_width * 0.5, 0.0));
@@ -596,7 +605,7 @@ int entry(int argc, char **argv)
 					draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
 
 					// draw amount
-					draw_text_xform(font, STR("5"), font_height, box_bottom_right_xform, v2(0.1, 0.1), COLOR_WHITE);
+					draw_text_xform(font, STR("5"), font_height, box_bottom_right_xform, v2(0.08, 0.08), COLOR_WHITE);
 
 					slot_index += 1;
 				}

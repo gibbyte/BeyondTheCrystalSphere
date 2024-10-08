@@ -259,8 +259,8 @@ void setup_item_ore_rock000(Entity *en)
 	en->sprite_id = SPRITE_item_ore_rock000;
 	en->is_item = true;
 }
-// Converts screen coordinates to world coordinates.
-Vector2 screen_to_world()
+
+Vector2 get_mouse_pos_in_ndc()
 {
 	float mouse_x = input_frame.mouse_x;
 	float mouse_y = input_frame.mouse_y;
@@ -272,10 +272,35 @@ Vector2 screen_to_world()
 	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
 	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
 
+	return (Vector2){ndc_x, ndc_y};
+}
+// Converts screen coordinates to world coordinates.
+Vector2 screen_to_world()
+{
+	// Get mouse position
+	float mouse_x = input_frame.mouse_x;
+	float mouse_y = input_frame.mouse_y;
+
+	// Get projection and view matrices
+	Matrix4 proj = draw_frame.projection;
+	Matrix4 view = draw_frame.camera_xform;
+
+	// Get window dimensions
+	float window_w = window.width;
+	float window_h = window.height;
+
+	// Convert mouse position to normalized device coordinates (NDC)
+	float ndc_x = (mouse_x / (window_w * 0.5f)) - 1.0f;
+	float ndc_y = (mouse_y / (window_h * 0.5f)) - 1.0f;
+
+	// Create a Vector4 for the world position
 	Vector4 world_pos = v4(ndc_x, ndc_y, 0, 1);
+
+	// Transform the NDC coordinates to world coordinates
 	world_pos = m4_transform(m4_inverse(proj), world_pos);
 	world_pos = m4_transform(view, world_pos);
 
+	// Return the world coordinates as a Vector2
 	return (Vector2){world_pos.x, world_pos.y};
 }
 
@@ -582,10 +607,17 @@ int entry(int argc, char **argv)
 
 					Sprite *sprite = get_sprite(get_sprite_id_from_archetype(i));
 
+					float is_selected_alpha = 0.0;
+
 					Draw_Quad *quad = draw_rect_xform(xform, v2(8, 8), v4(1, 1, 1, 0.2));
 					{
 						Range2f box = quad_to_range(quad);
-						log_info("box: %f %f %f %f", box.min.x, box.min.y, box.max.x, box.max.y);
+						if (range2f_contains(box, get_mouse_pos_in_ndc()))
+						{
+
+							is_selected_alpha = 1.0;
+						}
+						// log_info("box: %f %f %f %f", box.min.x, box.min.y, box.max.x, box.max.y);
 					}
 
 					Matrix4 box_bottom_right_xform = xform;
@@ -596,10 +628,12 @@ int entry(int argc, char **argv)
 					//	xform = m4_scale(xform, v3(1.0 + scale_adjust, 1.0 + scale_adjust, 1.0));
 					//}
 					// rotate.....
-					//{
-					//	float rotate_adjust = PI32 * 2.0 * sin_breathe(os_get_elapsed_seconds(), 1.0);
-					//	xform = m4_rotate_z(xform, rotate_adjust);
-					//}
+					if (is_selected_alpha == 1.0)
+					{
+						float rotate_adjust = PI32 * 2.0 * sin_breathe(os_get_elapsed_seconds(), 1.0);
+						xform = m4_rotate_z(xform, rotate_adjust);
+					}
+
 					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, get_sprite_size(sprite).y * -0.5, 0));
 
 					draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);

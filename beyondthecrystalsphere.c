@@ -12,6 +12,12 @@ inline float v2_dist(Vector2 a, Vector2 b)
 }
 
 #define m4_identity() m4_make_scale(v3(1, 1, 1))
+
+Vector2 range2f_get_center(Range2f r)
+{
+	return (Vector2){(r.min.x - r.max.x) * 0.5 + r.min.x, (r.min.y - r.max.y) * 0.5 + r.min.y};
+}
+
 // 0 -> 1
 
 // Item drops move up and down
@@ -49,9 +55,11 @@ Range2f quad_to_range(Draw_Quad *quad)
 {
 	return (Range2f){quad->bottom_left, quad->top_right};
 }
-// generic utils
 
 // utils
+// :tweaks
+Vector4 bg_box_col = {0, 0, 0, 0.5};
+
 const int tile_width = 8;
 const float entity_selection_radius = 16.0f;
 const float player_pickup_radius = 16.0f;
@@ -590,7 +598,7 @@ int entry(int argc, char **argv)
 			{
 				Matrix4 xform = m4_identity();
 				xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
-				draw_rect_xform(xform, v2(entire_thing_width_idk, icon_width), v4(0, 0, 0, 0.5));
+				draw_rect_xform(xform, v2(entire_thing_width_idk, icon_width), bg_box_col);
 			}
 
 			int slot_index = 0;
@@ -610,37 +618,47 @@ int entry(int argc, char **argv)
 					float is_selected_alpha = 0.0;
 
 					Draw_Quad *quad = draw_rect_xform(xform, v2(8, 8), v4(1, 1, 1, 0.2));
-					{
-						Range2f box = quad_to_range(quad);
-						if (range2f_contains(box, get_mouse_pos_in_ndc()))
-						{
 
-							is_selected_alpha = 1.0;
-						}
-						// log_info("box: %f %f %f %f", box.min.x, box.min.y, box.max.x, box.max.y);
+					Range2f icon_box = quad_to_range(quad);
+					Vector2 icon_center = range2f_get_center(icon_box);
+					if (range2f_contains(icon_box, get_mouse_pos_in_ndc()))
+					{
+
+						is_selected_alpha = 1.0;
 					}
+					// log_info("box: %f %f %f %f", box.min.x, box.min.y, box.max.x, box.max.y);
 
 					Matrix4 box_bottom_right_xform = xform;
+
 					xform = m4_translate(xform, v3(icon_width * 0.5, icon_width * 0.5, 0.0));
 
-					//{
-					//	float scale_adjust = 0.1 * sin_breathe(os_get_elapsed_seconds(), 20.0);
-					//	xform = m4_scale(xform, v3(1.0 + scale_adjust, 1.0 + scale_adjust, 1.0));
-					//}
-					// rotate.....
 					if (is_selected_alpha == 1.0)
 					{
-						float rotate_adjust = PI32 * 2.0 * sin_breathe(os_get_elapsed_seconds(), 1.0);
-						xform = m4_rotate_z(xform, rotate_adjust);
+						float scale_adjust = 0.3; // 0.1 * sin_breathe(os_get_current_time_in_seconds(), 20.0);
+						xform = m4_scale(xform, v3(1 + scale_adjust, 1 + scale_adjust, 1));
 					}
-
+					{
+						// could also rotate ...
+						// float adjust = PI32 * 2.0 * sin_breathe(os_get_current_time_in_seconds(), 1.0);
+						// xform = m4_rotate_z(xform, adjust);
+					}
 					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, get_sprite_size(sprite).y * -0.5, 0));
-
 					draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
 
 					// draw amount
-					draw_text_xform(font, STR("5"), font_height, box_bottom_right_xform, v2(0.08, 0.08), COLOR_WHITE);
+					// draw_text_xform(font, STR("5"), font_height, box_bottom_right_xform, v2(0.08, 0.08), COLOR_WHITE);
 
+					// tooltip
+					{
+						// icon_center
+						Matrix4 xform = m4_scalar(1.0);
+						Vector2 box_size = v2(20, 40);
+
+						// xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
+						xform = m4_translate(xform, v3(box_size.x * -0.5, box_size.y, 0));
+
+						draw_rect_xform(xform, box_size, bg_box_col);
+					}
 					slot_index += 1;
 				}
 			}

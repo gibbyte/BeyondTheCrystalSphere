@@ -18,6 +18,27 @@ Vector2 range2f_get_center(Range2f r)
 	return (Vector2){(r.min.x - r.max.x) * 0.5 + r.min.x, (r.min.y - r.max.y) * 0.5 + r.min.y};
 }
 
+// the scuff zone
+
+Draw_Quad ndc_quad_to_screen_quad(Draw_Quad ndc_quad)
+{
+
+	// NOTE: we're assuming these are the screen space matricies.
+	Matrix4 proj = draw_frame.projection;
+	Matrix4 view = draw_frame.camera_xform;
+
+	Matrix4 ndc_to_screen_space = m4_identity();
+	ndc_to_screen_space = m4_mul(ndc_to_screen_space, m4_inverse(proj));
+	ndc_to_screen_space = m4_mul(ndc_to_screen_space, view);
+
+	ndc_quad.bottom_left = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.bottom_left), 0, 1)).xy;
+	ndc_quad.bottom_right = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.bottom_right), 0, 1)).xy;
+	ndc_quad.top_left = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.top_left), 0, 1)).xy;
+	ndc_quad.top_right = m4_transform(ndc_to_screen_space, v4(v2_expand(ndc_quad.top_right), 0, 1)).xy;
+
+	return ndc_quad;
+}
+
 // 0 -> 1
 
 // Item drops move up and down
@@ -51,9 +72,9 @@ void animate_v2_to_target(Vector2 *value, Vector2 target, float delta_t, float r
 	animate_f32_to_target(&(value->y), target.y, delta_t, rate);
 }
 
-Range2f quad_to_range(Draw_Quad *quad)
+Range2f quad_to_range(Draw_Quad quad)
 {
-	return (Range2f){quad->bottom_left, quad->top_right};
+	return (Range2f){quad.bottom_left, quad.top_right};
 }
 
 // utils
@@ -588,13 +609,14 @@ int entry(int argc, char **argv)
 			}
 
 			const float icon_thing = 8.0;
-			// const float padding = 2.0;
 			float icon_width = icon_thing;
 
 			const int icon_row_count = 8;
 
 			float entire_thing_width_idk = icon_row_count * icon_width;
 			float x_start_pos = (width / 2.0) - (entire_thing_width_idk / 2.0);
+
+			// bg box rendering thing
 			{
 				Matrix4 xform = m4_identity();
 				xform = m4_translate(xform, v3(x_start_pos, y_pos, 0.0));
@@ -618,15 +640,11 @@ int entry(int argc, char **argv)
 					float is_selected_alpha = 0.0;
 
 					Draw_Quad *quad = draw_rect_xform(xform, v2(8, 8), v4(1, 1, 1, 0.2));
-
-					Range2f icon_box = quad_to_range(quad);
-					Vector2 icon_center = range2f_get_center(icon_box);
+					Range2f icon_box = quad_to_range(*quad);
 					if (range2f_contains(icon_box, get_mouse_pos_in_ndc()))
 					{
-
 						is_selected_alpha = 1.0;
 					}
-					// log_info("box: %f %f %f %f", box.min.x, box.min.y, box.max.x, box.max.y);
 
 					Matrix4 box_bottom_right_xform = xform;
 
@@ -645,17 +663,25 @@ int entry(int argc, char **argv)
 					xform = m4_translate(xform, v3(get_sprite_size(sprite).x * -0.5, get_sprite_size(sprite).y * -0.5, 0));
 					draw_image_xform(sprite->image, xform, get_sprite_size(sprite), COLOR_WHITE);
 
-					// draw amount
-					// draw_text_xform(font, STR("5"), font_height, box_bottom_right_xform, v2(0.08, 0.08), COLOR_WHITE);
+					// draw_text_xform(font, STR("5"), font_height, box_bottom_right_xform, v2(0.1, 0.1), COLOR_WHITE);
 
 					// tooltip
+					if (is_selected_alpha == 1.0)
 					{
+						Draw_Quad screen_quad = ndc_quad_to_screen_quad(*quad);
+						Range2f screen_range = quad_to_range(screen_quad);
+						Vector2 icon_center = range2f_get_center(screen_range);
+
 						// icon_center
 						Matrix4 xform = m4_scalar(1.0);
-						Vector2 box_size = v2(20, 40);
+
+						Vector2 box_size = v2(40, 14);
 
 						// xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
-						xform = m4_translate(xform, v3(box_size.x * -0.5, box_size.y, 0));
+						// fix this
+						xform = m4_translate(xform, v3(box_size.x * -0.3, -box_size.y + icon_width * 0.5, 0));
+						// xform = m4_translate(xform, v3(box_size.x * -0.5, -box_size.y - icon_width * 0.5, 0));
+						xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
 
 						draw_rect_xform(xform, box_size, bg_box_col);
 					}

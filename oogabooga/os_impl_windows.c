@@ -135,6 +135,12 @@ LARGE_INTEGER win32_counter_at_start;
 bool win32_do_handle_raw_input = false;
 HANDLE win32_xinput = 0;
 bool has_os_update_been_called_at_all = false;
+u32 win32_pre_maximize_window_x = 0;
+u32 win32_pre_maximize_window_y = 0;
+u32 win32_pre_maximize_window_width = 0;
+u32 win32_pre_maximize_window_height = 0;
+bool win32_ignore_next_window_position_change = false;
+bool win32_is_window_maximized = false;
 
 // Used to save windowed state when in fullscreen mode.
 DWORD win32_windowed_style = 0;

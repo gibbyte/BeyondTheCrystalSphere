@@ -675,7 +675,7 @@ int entry(int argc, char **argv)
 						// icon_center
 						Matrix4 xform = m4_scalar(1.0);
 
-						Vector2 box_size = v2(40, 14);
+						Vector2 box_size = v2(40, 60);
 
 						// xform = m4_pivot_box(xform, box_size, PIVOT_top_center);
 						// fix this
@@ -684,6 +684,17 @@ int entry(int argc, char **argv)
 						xform = m4_translate(xform, v3(icon_center.x, icon_center.y, 0));
 
 						draw_rect_xform(xform, box_size, bg_box_col);
+
+						string title = STR("Wood");
+						Gfx_Text_Metrics metrics = measure_text(font, title, font_height, v2(0.1, 0.1));
+						Vector2 draw_pos = icon_center;
+						draw_pos = v2_sub(draw_pos, metrics.visual_pos_min);
+						draw_pos = v2_add(draw_pos, v2_mul(metrics.visual_size, v2(0.0, 0.0)));
+
+						draw_pos = v2_add(draw_pos, v2(0, icon_width * -0.5));
+						draw_pos = v2_add(draw_pos, v2(0, -2.0));
+
+						draw_text(font, title, font_height, draw_pos, v2(0.1, 0.1), COLOR_WHITE);
 					}
 					slot_index += 1;
 				}
